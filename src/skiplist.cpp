@@ -2,6 +2,7 @@
 #include <optional>
 #include <random>
 #include <vector>
+#include <mutex>
 
 struct Node {
     std::string key;
@@ -31,15 +32,18 @@ SkipList::~SkipList() {
 }
 
 bool SkipList::Empty() const {
+    std::shared_lock<std::shared_mutex> lk(mu_);
     return size_ == 0;
 }
 
 int SkipList::Size() const {
+    std::shared_lock<std::shared_mutex> lk(mu_);
     return size_;
 }
 
 
 void SkipList::Insert(const std::string& key) {
+    std::unique_lock<std::shared_mutex> lk(mu_);
     std::vector<Node*> update(max_level_, nullptr);
     Node* x = FindGE_(key, update);
     
@@ -60,13 +64,15 @@ void SkipList::Insert(const std::string& key) {
 }
 
 void SkipList::Erase(const std::string& searchKey) {
+    std::unique_lock<std::shared_mutex> lk(mu_);
     std::vector<Node*> update(max_level_, nullptr);
     Node* x = FindGE_(searchKey, update);
     if (!x || x->key != searchKey) return;
 
     for (int i = 0; i < level_; ++i) {
-        if (update[i]->next[i] != x) break;
-        update[i]->next[i] = x->next[i];
+        if (update[i]->next[i] == x) {
+            update[i]->next[i] = x->next[i];
+        }
     }
     delete x;
     --size_;
@@ -77,18 +83,16 @@ void SkipList::Erase(const std::string& searchKey) {
 }
 
 std::optional<std::string> SkipList::Contains(const std::string& searchKey) const {
+    std::unique_lock<std::shared_mutex> lk(mu_);
     Node* x = head_;
     for (int i = level_ - 1; i >= 0; --i) {
         while (x->next[i] && x->next[i]->key < searchKey) {
             x = x->next[i];
         }
     }
-    x = x->next[0];
-    if (x && x->key == searchKey) {
-        return x->key;
-    } else {
-        return std::nullopt;
-    }
+    Node* y = x->next[0];
+    if (y && y->key == searchKey) return y->key;
+    return std::nullopt;
 }
 
 Node* SkipList::FindGE_(const std::string& target, std::vector<Node*>& update) const {
@@ -103,6 +107,7 @@ Node* SkipList::FindGE_(const std::string& target, std::vector<Node*>& update) c
 }
 
 void SkipList::Clear() {
+    std::shared_lock<std::shared_mutex> lk(mu_);
     ClearAll_();
     for (int i = 0; i < max_level_; ++i) {
         head_->next[i] = nullptr;

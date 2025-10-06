@@ -14,6 +14,9 @@ Author: Nicholas Terek
 #include <string>
 #include <vector>
 #include <optional>
+#include <shared_mutex> 
+#include <mutex>
+
 struct Node;
 
 class SkipList {
@@ -38,6 +41,8 @@ private:
     int size_ ;
     double prob_;
     Node* head_;
+
+    mutable std::shared_mutex mu_;
 
     Node* FindGE_(const std::string& target, std::vector<Node*>& update) const;
     void ClearAll_();
