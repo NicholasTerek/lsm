@@ -2,10 +2,13 @@
 #include <random>
 #include <mutex>
 
-struct Node {
+struct SkipList::Node {
     std::string key;
+    std::string value;
     std::vector<Node*> next;
-    Node(std::string k, int h) : key(std::move(k)), next(h, nullptr) {}
+    Node(std::string k, std::string v, int h)
+      : key(std::move(k)), value(std::move(v)), next(static_cast<size_t>(h), nullptr) {}
+    Node(int h) : key(), value(), next(static_cast<size_t>(h), nullptr) {}
 };
 
 double random_() {
@@ -20,7 +23,7 @@ SkipList::SkipList() {
     level_ = 1;
     size_ = 0;
     prob_ = 0.5;
-    head_ = new Node("", max_level_);
+    head_ = new Node(max_level_);
 }
 
 SkipList::~SkipList() {
@@ -29,7 +32,7 @@ SkipList::~SkipList() {
     head_ = nullptr;
 }
 
-bool SkipList::Empty() const {
+bool SkipList::isEmpty() const {
     std::shared_lock<std::shared_mutex> lk(mu_);
     return size_ == 0;
 }
@@ -40,25 +43,31 @@ int SkipList::Size() const {
 }
 
 
-void SkipList::Insert(const std::string& key) {
+void SkipList::Insert(const std::string& key, const std::string& value) {
     std::unique_lock<std::shared_mutex> lk(mu_);
-    std::vector<Node*> update(max_level_, nullptr);
-    Node* x = FindGE_(key, update);
-    
-    if (x && x->key == key) return;
 
+    std::vector<Node*> update(static_cast<size_t>(max_level_), nullptr);
+    Node* x = FindGE_(key, update);
+
+    if (x && x->key == key) {
+        x->value = value;
+        return;
+    }
+
+    // New node
     int node_level = RandomHeight_();
     if (node_level > level_) {
-        for (int i = level_; i < node_level; ++i) update[i] = head_;
+        for (int i = level_; i < node_level; ++i) update[static_cast<size_t>(i)] = head_;
         level_ = node_level;
     }
 
-    Node* n = new Node(key, node_level);
+    Node* n = new Node(key, value, node_level);
     for (int i = 0; i < node_level; ++i) {
-        n->next[i] = update[i]->next[i];
-        update[i]->next[i] = n;
+        n->next[static_cast<size_t>(i)] = update[static_cast<size_t>(i)]->next[static_cast<size_t>(i)];
+        update[static_cast<size_t>(i)]->next[static_cast<size_t>(i)] = n;
     }
     ++size_;
+    return;
 }
 
 void SkipList::Erase(const std::string& searchKey) {
@@ -81,7 +90,7 @@ void SkipList::Erase(const std::string& searchKey) {
 }
 
 std::optional<std::string> SkipList::Contains(const std::string& searchKey) const {
-    std::unique_lock<std::shared_mutex> lk(mu_);
+    std::shared_lock<std::shared_mutex> lk(mu_);
     Node* x = head_;
     for (int i = level_ - 1; i >= 0; --i) {
         while (x->next[i] && x->next[i]->key < searchKey) {
@@ -89,11 +98,11 @@ std::optional<std::string> SkipList::Contains(const std::string& searchKey) cons
         }
     }
     Node* y = x->next[0];
-    if (y && y->key == searchKey) return y->key;
+    if (y && y->key == searchKey) return y->value;
     return std::nullopt;
 }
 
-Node* SkipList::FindGE_(const std::string& target, std::vector<Node*>& update) const {
+SkipList::Node* SkipList::FindGE_(const std::string& target, std::vector<Node*>& update) const {
     Node* x = head_;
     for (int i = level_ -1; i >= 0; --i) {
         while (x->next[i] && x->next[i]->key < target) {
@@ -105,7 +114,7 @@ Node* SkipList::FindGE_(const std::string& target, std::vector<Node*>& update) c
 }
 
 void SkipList::Clear() {
-    std::shared_lock<std::shared_mutex> lk(mu_);
+    std::unique_lock<std::shared_mutex> lk(mu_);
     ClearAll_();
     for (int i = 0; i < max_level_; ++i) {
         head_->next[i] = nullptr;

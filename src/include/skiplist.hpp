@@ -1,6 +1,6 @@
 /*
 
-A skip list is a probabilistic data structure with effect searching 
+A skip list is a probabilistic data structure with effective searching 
 
 My Implemendation is based on: 
 William Pugh. 1990. Skip lists: a probabilistic alternative to balanced trees. 
@@ -9,25 +9,22 @@ Commun. ACM 33, 6 (June 1990), 668–676. https://doi.org/10.1145/78973.78977
 Author: Nicholas Terek
 */
 
-
 #pragma once
 #include <string>
 #include <vector>
 #include <optional>
 #include <shared_mutex>
 
-struct Node;
-
 class SkipList {
 public:
     SkipList();
     ~SkipList();
 
-    bool Empty() const;
+    bool isEmpty() const;
     int Size() const;
     void Clear();
 
-    void Insert(const std::string& key);
+    void Insert(const std::string& key, const std::string& value);
     void Erase(const std::string& key);
     std::optional<std::string> Contains(const std::string& key) const;
 
@@ -35,6 +32,8 @@ public:
     // bool GetResult(const std::string& key);
 
 private:
+    struct Node;
+    
     int max_level_;
     int level_;
     int size_ ;

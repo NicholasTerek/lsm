@@ -6,76 +6,76 @@
 #include <thread>
 #include <vector>
 
-
-
 static inline std::string K(int x) { return "k" + std::to_string(x); }
-
-// Tests
+static inline std::string V(int x) { return "v" + std::to_string(x); }
 
 TEST(SkipListTest, Instantiation) {
     SkipList sl;
-    EXPECT_TRUE(sl.Empty());
+    EXPECT_TRUE(sl.isEmpty());
     EXPECT_EQ(sl.Size(), 0);
 }
 
-TEST(SkipListTest, InsertAndContains) {
+TEST(SkipListTest, InsertAndGet) {
     SkipList sl;
 
-    sl.Insert("apple");
-    sl.Insert("banana");
-    sl.Insert("cherry");
+    sl.Insert("apple",  "red");
+    sl.Insert("banana", "yellow");
+    sl.Insert("cherry", "dark");
 
     EXPECT_EQ(sl.Size(), 3);
-    EXPECT_FALSE(sl.Empty());
+    EXPECT_FALSE(sl.isEmpty());
 
-    EXPECT_TRUE(sl.Contains("apple").has_value());
-    EXPECT_TRUE(sl.Contains("banana").has_value());
-    EXPECT_TRUE(sl.Contains("cherry").has_value());
+    EXPECT_EQ(sl.Contains("apple").value(),  "red");
+    EXPECT_EQ(sl.Contains("banana").value(), "yellow");
+    EXPECT_EQ(sl.Contains("cherry").value(), "dark");
     EXPECT_FALSE(sl.Contains("durian").has_value());
 }
 
-TEST(SkipListTest, DuplicateInsert) {
+TEST(SkipListTest, OverwriteDoesNotGrowSize) {
     SkipList sl;
-    sl.Insert("a");
-    sl.Insert("a");
-    sl.Insert("b");
-    sl.Insert("b");
-    sl.Insert("b");
-    sl.Insert("c");
+    sl.Insert("a", "1");
+    sl.Insert("a", "2"); 
+    sl.Insert("b", "3");
+    sl.Insert("b", "4"); 
+    sl.Insert("c", "5");
 
     EXPECT_TRUE(sl.Contains("a").has_value());
     EXPECT_TRUE(sl.Contains("b").has_value());
     EXPECT_TRUE(sl.Contains("c").has_value());
-    EXPECT_EQ(sl.Size(), 3);
+    EXPECT_EQ(sl.Size(), 3); 
+    EXPECT_EQ(sl.Contains("a").value(), "2");
+    EXPECT_EQ(sl.Contains("b").value(), "4");
+    EXPECT_EQ(sl.Contains("c").value(), "5");
 }
 
 TEST(SkipListTest, ClearResetsStructure) {
     SkipList sl;
-    sl.Insert("k1");
-    sl.Insert("k2");
-    sl.Insert("k3");
+    sl.Insert("k1", "v1");
+    sl.Insert("k2", "v2");
+    sl.Insert("k3", "v3");
     EXPECT_EQ(sl.Size(), 3);
 
     sl.Clear();
-    EXPECT_TRUE(sl.Empty());
+    EXPECT_TRUE(sl.isEmpty());
     EXPECT_EQ(sl.Size(), 0);
     EXPECT_FALSE(sl.Contains("k1").has_value());
     EXPECT_FALSE(sl.Contains("k2").has_value());
     EXPECT_FALSE(sl.Contains("k3").has_value());
 
     // Ensure list still works after Clear
-    sl.Insert("k4");
+    sl.Insert("k4", "v4");
     EXPECT_TRUE(sl.Contains("k4").has_value());
+    EXPECT_EQ(sl.Contains("k4").value(), "v4");
     EXPECT_EQ(sl.Size(), 1);
 }
 
 TEST(SkipListTest, EraseExistingMiddleHeadTail) {
     SkipList sl;
     // Lexicographic order: "", "a", "b", "c", "zz"
-    sl.Insert("b");
-    sl.Insert("a");
-    sl.Insert("c");
-    sl.Insert("zz");
+    sl.Insert("b", "vb");
+    sl.Insert("a", "va");
+    sl.Insert("c", "vc");
+    sl.Insert("zz", "vzz");
 
     EXPECT_EQ(sl.Size(), 4);
 
@@ -83,9 +83,9 @@ TEST(SkipListTest, EraseExistingMiddleHeadTail) {
     sl.Erase("b");
     EXPECT_EQ(sl.Size(), 3);
     EXPECT_FALSE(sl.Contains("b").has_value());
-    EXPECT_TRUE(sl.Contains("a").has_value());
-    EXPECT_TRUE(sl.Contains("c").has_value());
-    EXPECT_TRUE(sl.Contains("zz").has_value());
+    EXPECT_EQ(sl.Contains("a").value(),  "va");
+    EXPECT_EQ(sl.Contains("c").value(),  "vc");
+    EXPECT_EQ(sl.Contains("zz").value(), "vzz");
 
     // Erase head-equivalent (smallest)
     sl.Erase("a");
@@ -99,14 +99,14 @@ TEST(SkipListTest, EraseExistingMiddleHeadTail) {
 
     // Erase last
     sl.Erase("c");
-    EXPECT_TRUE(sl.Empty());
+    EXPECT_TRUE(sl.isEmpty());
     EXPECT_EQ(sl.Size(), 0);
 }
 
 TEST(SkipListTest, EraseMissingNoCrash) {
     SkipList sl;
-    sl.Insert("a");
-    sl.Insert("c");
+    sl.Insert("a", "va");
+    sl.Insert("c", "vc");
 
     sl.Erase("b"); // not present
     EXPECT_EQ(sl.Size(), 2);
@@ -116,11 +116,11 @@ TEST(SkipListTest, EraseMissingNoCrash) {
 
 TEST(SkipListTest, AllowsEmptyStringKey) {
     SkipList sl;
-    sl.Insert("");
-    sl.Insert("x");
+    sl.Insert("", "vz");
+    sl.Insert("x", "vx");
     EXPECT_EQ(sl.Size(), 2);
-    EXPECT_TRUE(sl.Contains("").has_value());
-    EXPECT_TRUE(sl.Contains("x").has_value());
+    EXPECT_EQ(sl.Contains("").value(), "vz");
+    EXPECT_EQ(sl.Contains("x").value(), "vx");
 
     sl.Erase("");
     EXPECT_EQ(sl.Size(), 1);
@@ -131,18 +131,16 @@ TEST(SkipListTest, AllowsEmptyStringKey) {
 TEST(SkipListTest, EraseNonExistingElement) {
     SkipList list;
 
-    // Insert some elements
     for (int i = 0; i < 5; ++i) {
-        list.Insert(K(i));
+        list.Insert(K(i), V(i));
     }
 
-    // Try erasing a non-existing element (Erase is void in your API)
-    list.Erase(K(10));
+    list.Erase(K(10)); // not present
 
-    // Size should remain the same, all originals still present
     EXPECT_EQ(list.Size(), 5);
     for (int i = 0; i < 5; ++i) {
         EXPECT_TRUE(list.Contains(K(i)).has_value());
+        EXPECT_EQ(list.Contains(K(i)).value(), V(i));
     }
     EXPECT_FALSE(list.Contains(K(10)).has_value());
 }
@@ -154,7 +152,7 @@ TEST(SkipListTest, ConcurrentInsertTest) {
 
     auto insert_task = [&](int start) {
         for (int i = start; i < start + num_insertions_per_thread; ++i) {
-            list.Insert(K(i)); // your Insert is void
+            list.Insert(K(i), V(i));
         }
     };
 
@@ -165,21 +163,19 @@ TEST(SkipListTest, ConcurrentInsertTest) {
     }
     for (auto &th : threads) th.join();
 
-    // Verify that all inserted keys are present
     for (int i = 0; i < num_threads * num_insertions_per_thread; ++i) {
-        EXPECT_TRUE(list.Contains(K(i)).has_value());
+        auto got = list.Contains(K(i));
+        ASSERT_TRUE(got.has_value());
+        EXPECT_EQ(*got, V(i));
     }
-
-    // Optional: check size (target to work toward with thread-safety)
-    EXPECT_EQ(list.Size(), num_threads * num_insertions_per_thread);
+    EXPECT_EQ(list.Size(), static_cast<size_t>(num_threads * num_insertions_per_thread));
 }
 
 TEST(SkipListTest, ConcurrentEraseTest) {
     SkipList list;
 
-    // Initially insert some elements into the list
     for (int i = 0; i < 100; ++i) {
-        list.Insert(K(i));
+        list.Insert(K(i), V(i));
     }
 
     const int num_threads = 10;
@@ -187,7 +183,7 @@ TEST(SkipListTest, ConcurrentEraseTest) {
 
     auto erase_task = [&](int start) {
         for (int i = start; i < start + num_erasures_per_thread; ++i) {
-            list.Erase(K(i)); // void Erase
+            list.Erase(K(i));
         }
     };
 
@@ -198,12 +194,13 @@ TEST(SkipListTest, ConcurrentEraseTest) {
     }
     for (auto &th : threads) th.join();
 
-    // Verify that erased elements are no longer in the list
     for (int i = 0; i < 100; ++i) {
         if (i < num_threads * num_erasures_per_thread) {
             EXPECT_FALSE(list.Contains(K(i)).has_value());
         } else {
-            EXPECT_TRUE(list.Contains(K(i)).has_value());
+            auto got = list.Contains(K(i));
+            ASSERT_TRUE(got.has_value());
+            EXPECT_EQ(*got, V(i));
         }
     }
 }
@@ -211,9 +208,8 @@ TEST(SkipListTest, ConcurrentEraseTest) {
 TEST(SkipListTest, ConcurrentInsertAndEraseTest) {
     SkipList list;
 
-    // Initially insert some elements into the list
     for (int i = 0; i < 100; ++i) {
-        list.Insert(K(i));
+        list.Insert(K(i), V(i));
     }
 
     const int num_threads = 10;
@@ -222,10 +218,10 @@ TEST(SkipListTest, ConcurrentInsertAndEraseTest) {
     auto task = [&](int start) {
         for (int i = start; i < start + num_operations_per_thread; ++i) {
             if (!list.Contains(K(i)).has_value()) {
-                list.Insert(K(i));
+                list.Insert(K(i), V(i));
             }
-            list.Insert(K(i + 100)); // insert a new disjoint range
-            list.Erase(K(i));        // erase from the original range
+            list.Insert(K(i + 100), V(i + 100)); // disjoint range
+            list.Erase(K(i));                    // remove original
         }
     };
 
@@ -236,47 +232,40 @@ TEST(SkipListTest, ConcurrentInsertAndEraseTest) {
     }
     for (auto &th : threads) th.join();
 
-    // Verify that elements that were inserted are in the list
     for (int i = 100; i < 100 + num_threads * num_operations_per_thread; ++i) {
-        EXPECT_TRUE(list.Contains(K(i)).has_value());
+        auto got = list.Contains(K(i));
+        ASSERT_TRUE(got.has_value());
+        EXPECT_EQ(*got, V(i));
     }
-
-    // Verify that elements that were erased are no longer in the list
     for (int i = 0; i < num_threads * num_operations_per_thread; ++i) {
         EXPECT_FALSE(list.Contains(K(i)).has_value());
     }
 }
 
 TEST(SkipListTest, ConcurrentReadTest) {
-    // Number of threads to use for concurrent reads
     const int num_threads = 8;
     std::vector<std::thread> threads;
     threads.reserve(num_threads);
 
-    // Use a smaller total locally if needed
     const int total_num_elements = num_threads * 10000;
 
     auto list = std::make_unique<SkipList>();
-    // Insert some elements into the skip list
     for (int i = 0; i < total_num_elements; ++i) {
-        list->Insert(K(i));
+        list->Insert(K(i), V(i));
     }
 
-    // Function to perform concurrent reads
     auto read_task = [&list](int start, int end) {
         for (int i = start; i < end; ++i) {
-            (void)list->Contains(K(i)); // ignore result, just stress lookups
+            (void)list->Contains(K(i));
         }
     };
 
-    // Launch threads to perform concurrent reads
     for (int t = 0; t < num_threads; ++t) {
         threads.emplace_back(read_task, 0, total_num_elements);
     }
 
     for (auto &th : threads) th.join();
 
-    // Spot-check a couple values to still exist
     EXPECT_TRUE(list->Contains(K(0)).has_value());
     EXPECT_TRUE(list->Contains(K(total_num_elements - 1)).has_value());
 }
