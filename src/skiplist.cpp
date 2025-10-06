@@ -1,7 +1,5 @@
 #include "include/skiplist.hpp"
-#include <optional>
 #include <random>
-#include <vector>
 #include <mutex>
 
 struct Node {

@@ -1,7 +1,6 @@
 #include "src/include/skiplist.hpp"
 #include <gtest/gtest.h>
 
-#include <atomic>
 #include <memory>
 #include <string>
 #include <thread>
