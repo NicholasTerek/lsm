@@ -16,32 +16,47 @@ option(ENABLE_ASAN "Enable AddressSanitizer for tests" ON)
 # ---- GTest ----
 find_package(GTest REQUIRED)
 
-# ---- Include paths ----
-# Prefer pointing to your public headers folder (adjust if your header path differs)
-# e.g., your header is include/skiplist.hpp
-include_directories(${CMAKE_SOURCE_DIR})
+# ---- Auto-discover source files ----
+file(GLOB_RECURSE LSM_SOURCES "src/*.cpp")
+file(GLOB_RECURSE LSM_HEADERS "src/include/*.hpp")
 
-# ---- Library (your implementation) ----
-add_library(skiplist src/skiplist.cpp)
-target_include_directories(skiplist PUBLIC ${CMAKE_SOURCE_DIR}/include)
-# Nice debug defaults
-target_compile_options(skiplist PRIVATE
-  $<$<CONFIG:Debug>:-O0 -g3 -fno-omit-frame-pointer>
+# ---- Main LSM Library ----
+add_library(lsm ${LSM_SOURCES} ${LSM_HEADERS})
+target_include_directories(lsm PUBLIC 
+    src/include          # For direct header names: #include "mem_table.hpp"
+    ${CMAKE_SOURCE_DIR}  # For full paths: #include "src/include/mem_table.hpp"
 )
 
-# ---- Test binary ----
-add_executable(skiplist_test test/skiplist_test.cpp)
-target_link_libraries(skiplist_test PRIVATE skiplist GTest::gtest GTest::gtest_main pthread)
-target_compile_options(skiplist_test PRIVATE
-  $<$<CONFIG:Debug>:-O0 -g3 -fno-omit-frame-pointer>
-)
+# Common compile options for all targets
+set(DEBUG_COMPILE_OPTIONS -O0 -g3 -fno-omit-frame-pointer)
+target_compile_options(lsm PRIVATE $<$<CONFIG:Debug>:${DEBUG_COMPILE_OPTIONS}>)
 
-# Optional ASan on tests only
-if(ENABLE_ASAN)
-  target_compile_options(skiplist_test PRIVATE -fsanitize=address)
-  target_link_options(skiplist_test PRIVATE -fsanitize=address)
-endif()
+# ---- Test Discovery ----
+file(GLOB TEST_SOURCES "test/*_test.cpp")
+
+# Function to create tests automatically
+function(create_test test_file)
+    get_filename_component(test_name ${test_file} NAME_WE)
+    add_executable(${test_name} ${test_file})
+    target_link_libraries(${test_name} PRIVATE lsm GTest::gtest GTest::gtest_main pthread)
+    target_compile_options(${test_name} PRIVATE $<$<CONFIG:Debug>:${DEBUG_COMPILE_OPTIONS}>)
+    
+    # Add ASan if enabled
+    if(ENABLE_ASAN)
+        target_compile_options(${test_name} PRIVATE -fsanitize=address)
+        target_link_options(${test_name} PRIVATE -fsanitize=address)
+    endif()
+    
+    # Register with CTest
+    string(REPLACE "_test" "Test" test_display_name ${test_name})
+    string(REPLACE "_" "" test_display_name ${test_display_name})
+    add_test(NAME ${test_display_name} COMMAND ${test_name})
+endfunction()
+
+# Create all tests automatically
+foreach(test_file ${TEST_SOURCES})
+    create_test(${test_file})
+endforeach()
 
 # ---- CTest integration ----
 enable_testing()
-add_test(NAME SkipListTest COMMAND skiplist_test)
