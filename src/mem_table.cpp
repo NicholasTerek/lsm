@@ -1,7 +1,7 @@
 #include "include/mem_table.hpp"
 
 
-MemTable::MemTable(){
+MemTable::MemTable() : id_(0), approximatesize_(0) {
 
 }
 MemTable::~MemTable(){
