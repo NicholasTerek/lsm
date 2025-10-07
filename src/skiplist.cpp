@@ -139,3 +139,32 @@ int SkipList::RandomHeight_() const {
     }
     return level;
 }
+
+// SkipList Iterator 
+std::string SkipList::SkipListIterator::key(){
+    return current_->key;
+}
+
+std::string SkipList::SkipListIterator::value(){
+    return current_->value;
+}
+
+bool SkipList::SkipListIterator::is_valid(){
+    return current_ != nullptr;
+}
+
+void SkipList::SkipListIterator::next(){
+    current_= current_->next[0];
+}
+
+SkipList::SkipListIterator SkipList::begin() const {
+    return SkipListIterator(const_cast<SkipList*>(this), head_->next[0]);
+}
+
+SkipList::SkipListIterator SkipList::scan(const std::string& start_key) const {
+    // Find first node >= start_key
+    std::vector<Node*> update(max_level_);
+    Node* start_node = FindGE_(start_key, update);
+    
+    return SkipListIterator(const_cast<SkipList*>(this), start_node);
+}

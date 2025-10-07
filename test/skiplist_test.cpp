@@ -269,3 +269,129 @@ TEST(SkipListTest, ConcurrentReadTest) {
     EXPECT_TRUE(list->Contains(K(0)).has_value());
     EXPECT_TRUE(list->Contains(K(total_num_elements - 1)).has_value());
 }
+
+// Iterator Tests
+TEST(SkipListTest, IteratorBeginEmpty) {
+    SkipList list;
+    auto iter = list.begin();
+    
+    // Empty list should have invalid iterator
+    EXPECT_FALSE(iter.is_valid());
+}
+
+TEST(SkipListTest, IteratorBeginBasic) {
+    SkipList list;
+    list.Insert("b", "value_b");
+    list.Insert("a", "value_a");
+    list.Insert("c", "value_c");
+    
+    auto iter = list.begin();
+    
+    // Should start at first key in sorted order
+    EXPECT_TRUE(iter.is_valid());
+    EXPECT_EQ(iter.key(), "a");
+    EXPECT_EQ(iter.value(), "value_a");
+    
+    // Move to next
+    iter.next();
+    EXPECT_TRUE(iter.is_valid());
+    EXPECT_EQ(iter.key(), "b");
+    EXPECT_EQ(iter.value(), "value_b");
+    
+    // Move to next
+    iter.next();
+    EXPECT_TRUE(iter.is_valid());
+    EXPECT_EQ(iter.key(), "c");
+    EXPECT_EQ(iter.value(), "value_c");
+    
+    // Move past end
+    iter.next();
+    EXPECT_FALSE(iter.is_valid());
+}
+
+TEST(SkipListTest, IteratorScanExactMatch) {
+    SkipList list;
+    list.Insert("apple", "red");
+    list.Insert("banana", "yellow");
+    list.Insert("cherry", "dark");
+    
+    // Scan starting from exact key
+    auto iter = list.scan("banana");
+    
+    EXPECT_TRUE(iter.is_valid());
+    EXPECT_EQ(iter.key(), "banana");
+    EXPECT_EQ(iter.value(), "yellow");
+    
+    iter.next();
+    EXPECT_TRUE(iter.is_valid());
+    EXPECT_EQ(iter.key(), "cherry");
+    EXPECT_EQ(iter.value(), "dark");
+    
+    iter.next();
+    EXPECT_FALSE(iter.is_valid());
+}
+
+TEST(SkipListTest, IteratorScanGreaterEqual) {
+    SkipList list;
+    list.Insert("a", "1");
+    list.Insert("c", "3");
+    list.Insert("e", "5");
+    
+    // Scan starting from key that doesn't exist - should find next greater
+    auto iter = list.scan("d");
+    
+    EXPECT_TRUE(iter.is_valid());
+    EXPECT_EQ(iter.key(), "e");  // First key >= "d"
+    EXPECT_EQ(iter.value(), "5");
+    
+    iter.next();
+    EXPECT_FALSE(iter.is_valid());
+}
+
+TEST(SkipListTest, IteratorScanBeyondEnd) {
+    SkipList list;
+    list.Insert("a", "1");
+    list.Insert("b", "2");
+    
+    // Scan starting from key beyond all existing keys
+    auto iter = list.scan("z");
+    
+    EXPECT_FALSE(iter.is_valid());
+}
+
+TEST(SkipListTest, IteratorCompleteTraversal) {
+    SkipList list;
+    std::vector<std::string> keys = {"key1", "key3", "key5", "key7", "key9"};
+    std::vector<std::string> values = {"val1", "val3", "val5", "val7", "val9"};
+    
+    // Insert in random order
+    for (size_t i = 0; i < keys.size(); ++i) {
+        list.Insert(keys[i], values[i]);
+    }
+    
+    // Traverse all elements
+    auto iter = list.begin();
+    size_t count = 0;
+    
+    while (iter.is_valid()) {
+        EXPECT_EQ(iter.key(), keys[count]);
+        EXPECT_EQ(iter.value(), values[count]);
+        count++;
+        iter.next();
+    }
+    
+    EXPECT_EQ(count, keys.size());
+}
+
+TEST(SkipListTest, IteratorSingleElement) {
+    SkipList list;
+    list.Insert("only", "one");
+    
+    auto iter = list.begin();
+    EXPECT_TRUE(iter.is_valid());
+    EXPECT_EQ(iter.key(), "only");
+    EXPECT_EQ(iter.value(), "one");
+    
+    iter.next();
+    EXPECT_FALSE(iter.is_valid());
+}

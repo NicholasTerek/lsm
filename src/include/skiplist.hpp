@@ -10,6 +10,7 @@ Author: Nicholas Terek
 */
 
 #pragma once
+#include "src/include/StorageIterator.hpp"
 #include <string>
 #include <vector>
 #include <optional>
@@ -19,7 +20,7 @@ class SkipList {
 public:
     SkipList();
     ~SkipList();
-
+    struct Node;
     bool isEmpty() const;
     int Size() const;
     void Clear();
@@ -31,9 +32,26 @@ public:
     // placeholder for later:
     // bool GetResult(const std::string& key);
 
-private:
-    struct Node;
+    class SkipListIterator : public StorageIterator {
+    public:
+        SkipListIterator() : skiplist_(nullptr), current_(nullptr) {}
+        SkipListIterator(SkipList* skiplist, Node* current) 
+            : skiplist_(skiplist), current_(current) {}
+
+        std::string key() override;
+        std::string value() override;
+        bool is_valid() override;
+        void next() override;
     
+    private:
+        SkipList* skiplist_;
+        SkipList::Node* current_;
+    };
+
+    SkipListIterator begin() const;
+    SkipListIterator scan(const std::string& start_key) const;
+
+private:
     int max_level_;
     int level_;
     int size_ ;
