@@ -1,9 +1,11 @@
 #include "include/mem_table.hpp"
 
 
-MemTable::MemTable() : id_(0), approximatesize_(0) {
-
+MemTable::MemTable() {
+    id_ = 0;
+    approximatesize_ = 0;
 }
+
 MemTable::~MemTable(){
 
 }
