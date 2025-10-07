@@ -29,7 +29,10 @@ LsmStorageInner::~LsmStorageInner() {
 }
 
 std::optional<std::string> LsmStorageInner::get(const std::string& key) {
-    // Search on the current memtable (mirrors Rust implementation)
+    // Use lock to ensure consistent state while reading
+    std::lock_guard<std::mutex> lock(state_lock_);
+    
+    // Search on the current memtable first (newest data)
     std::optional<std::string> result = state_.memtable->get(key);
     
     if (result.has_value()) {
@@ -40,7 +43,8 @@ std::optional<std::string> LsmStorageInner::get(const std::string& key) {
         return result.value();
     }
     
-    // Search on immutable memtables (for later implementation)
+    // Search on immutable memtables from newest to oldest
+    // (index 0 is newest since we insert at the beginning)
     for (MemTable* memtable : state_.imm_memtables) {
         std::optional<std::string> result = memtable->get(key);
         if (result.has_value()) {
