@@ -41,6 +41,9 @@ function(create_test test_file)
     target_link_libraries(${test_name} PRIVATE lsm GTest::gtest GTest::gtest_main pthread)
     target_compile_options(${test_name} PRIVATE $<$<CONFIG:Debug>:${DEBUG_COMPILE_OPTIONS}>)
     
+    # Add the source directory as include path so tests can use "src/include/header.hpp"
+    target_include_directories(${test_name} PRIVATE ${CMAKE_SOURCE_DIR})
+    
     # Add ASan if enabled
     if(ENABLE_ASAN)
         target_compile_options(${test_name} PRIVATE -fsanitize=address)
