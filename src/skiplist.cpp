@@ -2,15 +2,6 @@
 #include <random>
 #include <mutex>
 
-struct SkipList::Node {
-    std::string key;
-    std::string value;
-    std::vector<Node*> next;
-    Node(std::string k, std::string v, int h)
-      : key(std::move(k)), value(std::move(v)), next(static_cast<size_t>(h), nullptr) {}
-    Node(int h) : key(), value(), next(static_cast<size_t>(h), nullptr) {}
-};
-
 double random_() {
     static std::random_device rd;
     static std::mt19937 engine(rd());

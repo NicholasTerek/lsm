@@ -42,3 +42,40 @@ bool MemTable::put(std::string key, std::string value){
     map_.Insert(key, value);
     return true;
 }
+
+// MemTableIterator constructors
+MemTable::MemTableIterator::MemTableIterator() 
+    : current_node_(nullptr) {}
+
+MemTable::MemTableIterator::MemTableIterator(SkipList::Node* current)
+    : current_node_(current) {}
+
+// MemTableIterator methods
+std::string MemTable::MemTableIterator::key() {
+    return current_node_ ? current_node_->key : "";
+}
+
+std::string MemTable::MemTableIterator::value() {
+    return current_node_ ? current_node_->value : "";
+}
+
+bool MemTable::MemTableIterator::is_valid() {
+    return current_node_ != nullptr;
+}
+
+void MemTable::MemTableIterator::next() {
+    if (current_node_) {
+        current_node_ = current_node_->next[0];
+    }
+}
+
+// MemTable iterator factory methods
+MemTable::MemTableIterator MemTable::begin() const {
+    return MemTableIterator(map_.head_->next[0]);
+}
+
+MemTable::MemTableIterator MemTable::scan(const std::string& lower_bound, const std::string& upper_bound) const {
+    auto skip_iter = map_.scan(lower_bound);
+    // Since MemTable is a friend of SkipList, we can access the private current_ member
+    return MemTableIterator(skip_iter.current_);
+}

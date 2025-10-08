@@ -17,10 +17,19 @@ Author: Nicholas Terek
 #include <shared_mutex>
 
 class SkipList {
+    friend class MemTable;
 public:
+    struct Node {
+        std::string key;
+        std::string value;
+        std::vector<Node*> next;
+        Node(std::string k, std::string v, int h)
+          : key(std::move(k)), value(std::move(v)), next(static_cast<size_t>(h), nullptr) {}
+        Node(int h) : key(), value(), next(static_cast<size_t>(h), nullptr) {}
+    };
+
     SkipList();
     ~SkipList();
-    struct Node;
     bool isEmpty() const;
     int Size() const;
     void Clear();
@@ -33,6 +42,7 @@ public:
     // bool GetResult(const std::string& key);
 
     class SkipListIterator : public StorageIterator {
+        friend class MemTable;
     public:
         SkipListIterator() : skiplist_(nullptr), current_(nullptr) {}
         SkipListIterator(SkipList* skiplist, Node* current) 
