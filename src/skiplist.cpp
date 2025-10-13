@@ -2,6 +2,11 @@
 #include <random>
 #include <mutex>
 
+/**
+ * Helper function for random number generation used in probabilistic height selection
+ * Returns 0 or 1 with equal probability for coin-flip style randomness
+ * Static variables ensure thread-local random state for performance
+ */
 double random_() {
     static std::random_device rd;
     static std::mt19937 engine(rd());
@@ -9,6 +14,7 @@ double random_() {
     return dist(engine);
 }
 
+// Constructor implementation
 SkipList::SkipList() {
     max_level_ = 16;
     level_ = 1;
@@ -17,23 +23,27 @@ SkipList::SkipList() {
     head_ = new Node(max_level_);
 }
 
+// Destructor implementation
 SkipList::~SkipList() {
     Clear();
     delete head_;
     head_ = nullptr;
 }
 
+// Thread-safe empty check with shared lock (allows concurrent reads)
 bool SkipList::isEmpty() const {
     std::shared_lock<std::shared_mutex> lk(mu_);
     return size_ == 0;
 }
 
+// Thread-safe size getter with shared lock (allows concurrent reads)
 int SkipList::Size() const {
     std::shared_lock<std::shared_mutex> lk(mu_);
     return size_;
 }
 
 
+// Insert/update implementation with skip list algorithm
 void SkipList::Insert(const std::string& key, const std::string& value) {
     std::unique_lock<std::shared_mutex> lk(mu_);
 
@@ -45,10 +55,11 @@ void SkipList::Insert(const std::string& key, const std::string& value) {
         return;
     }
 
-    // New node
+    // Create new node with probabilistically determined height
     int node_level = RandomHeight_();
     if (node_level > level_) {
-        for (int i = level_; i < node_level; ++i) update[static_cast<size_t>(i)] = head_;
+        for (int i = level_; i < node_level; ++i) 
+            update[static_cast<size_t>(i)] = head_;
         level_ = node_level;
     }
 
@@ -61,6 +72,7 @@ void SkipList::Insert(const std::string& key, const std::string& value) {
     return;
 }
 
+// Delete implementation with proper level cleanup
 void SkipList::Erase(const std::string& searchKey) {
     std::unique_lock<std::shared_mutex> lk(mu_);
     std::vector<Node*> update(max_level_, nullptr);
@@ -80,6 +92,7 @@ void SkipList::Erase(const std::string& searchKey) {
     }
 }
 
+// Search implementation using skip list's logarithmic search algorithm
 std::optional<std::string> SkipList::Contains(const std::string& searchKey) const {
     std::shared_lock<std::shared_mutex> lk(mu_);
     Node* x = head_;
@@ -104,16 +117,20 @@ SkipList::Node* SkipList::FindGE_(const std::string& target, std::vector<Node*>&
     return x->next[0];
 }
 
+// Clear implementation with thread safety
 void SkipList::Clear() {
     std::unique_lock<std::shared_mutex> lk(mu_);
     ClearAll_();
     for (int i = 0; i < max_level_; ++i) {
         head_->next[i] = nullptr;
     }
+    
+    // Reset to initial state
     size_ = 0;
     level_ = 1;
 }
 
+// Helper: delete all data nodes by traversing bottom level
 void SkipList::ClearAll_() {
     Node* x = head_->next[0];
     while (x) {
@@ -123,6 +140,8 @@ void SkipList::ClearAll_() {
     }
 }
 
+// Generate random height using geometric distribution
+// Simulates coin flips: keep going up while getting "heads"
 int SkipList::RandomHeight_() const {
     int level = 1;
     while (random_() < prob_ and level < max_level_) {
@@ -131,7 +150,7 @@ int SkipList::RandomHeight_() const {
     return level;
 }
 
-// SkipList Iterator 
+// SkipList Iterator implementations
 std::string SkipList::SkipListIterator::key(){
     return current_->key;
 }
@@ -148,10 +167,12 @@ void SkipList::SkipListIterator::next(){
     current_= current_->next[0];
 }
 
+// Create iterator starting from first data node
 SkipList::SkipListIterator SkipList::begin() const {
     return SkipListIterator(const_cast<SkipList*>(this), head_->next[0]);
 }
 
+// Create iterator starting from first node >= start_key (range scan)
 SkipList::SkipListIterator SkipList::scan(const std::string& start_key) const {
     // Find first node >= start_key
     std::vector<Node*> update(max_level_);
