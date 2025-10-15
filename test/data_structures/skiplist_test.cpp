@@ -1,4 +1,4 @@
-#include "src/include/skiplist.hpp"
+#include "src/include/data_structures/skiplist.hpp"
 #include <gtest/gtest.h>
 
 #include <memory>
