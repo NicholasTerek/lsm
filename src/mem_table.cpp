@@ -79,3 +79,12 @@ MemTable::MemTableIterator MemTable::scan(const std::string& lower_bound, const 
     // Since MemTable is a friend of SkipList, we can access the private current_ member
     return MemTableIterator(skip_iter.current_);
 }
+
+std::unique_ptr<MemTable::MemTableIterator> MemTable::begin_ptr() const {
+    return std::make_unique<MemTableIterator>(map_.head_->next[0]);
+}
+
+std::unique_ptr<MemTable::MemTableIterator> MemTable::scan_ptr(const std::string& lower_bound, const std::string& upper_bound) const {
+    auto skip_iter = map_.scan(lower_bound);
+    return std::make_unique<MemTableIterator>(skip_iter.current_);
+}

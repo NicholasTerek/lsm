@@ -1,8 +1,9 @@
-#include "src/include/StorageIterator.hpp"
+#include "src/include/iterators/StorageIterator.hpp"
 #include "src/include/data_structures/skiplist.hpp"
 #include <atomic>
 #include <optional>
 #include <string>
+#include <memory>
 
 class MemTable {
 public:
@@ -33,6 +34,9 @@ public:
 
     MemTableIterator begin() const;
     MemTableIterator scan(const std::string& lower_bound, const std::string& upper_bound) const;
+    
+    std::unique_ptr<MemTableIterator> begin_ptr() const;
+    std::unique_ptr<MemTableIterator> scan_ptr(const std::string& lower_bound, const std::string& upper_bound) const;
 private:
     SkipList map_;
     int id_;
