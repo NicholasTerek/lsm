@@ -1,5 +1,7 @@
 #pragma once
 #include "mem_table.hpp"
+#include "src/include/iterators/lsm_iterator.hpp"
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -28,6 +30,8 @@ public:
     void put(const std::string& key, const std::string& value);
     void delete_key(const std::string& key);
     
+    std::unique_ptr<FusedIterator> scan();
+
     // Force freeze the current memtable to an immutable memtable
     void force_freeze_memtable();
     
@@ -36,6 +40,8 @@ public:
     int get_imm_memtable_size(int index) const;
     void set_target_sst_size(int size);
     int get_current_memtable_size() const;
+
+    
 
 private:
     LsmStorageState state_;
@@ -59,6 +65,9 @@ class Lsm {
 public:
     Lsm();
     ~Lsm();
+    
+
+    std::unique_ptr<FusedIterator> scan();
     
     std::optional<std::string> get(const std::string& key);
     void put(const std::string& key, const std::string& value);

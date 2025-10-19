@@ -1,5 +1,8 @@
 #include "include/lsm_storage.hpp"
-
+#include "include/iterators/lsm_iterator.hpp"
+#include "include/iterators/merge_iterator.hpp"
+#include <memory>
+#include <vector>
 
 LsmStorageState::LsmStorageState() {
     // Initialize with memtable of id 0
@@ -92,6 +95,26 @@ void LsmStorageInner::force_freeze_memtable() {
 
 int LsmStorageInner::next_sst_id() {
     return next_sst_id_++;
+}
+
+std::unique_ptr<FusedIterator> LsmStorageInner::scan() {
+    std::lock_guard<std::mutex> lock(state_lock_);
+    
+    std::vector<std::unique_ptr<StorageIterator>> iters;
+    iters.push_back(state_.memtable->begin_ptr());
+    
+    for (size_t i = 0; i < state_.imm_memtables.size(); i++) {
+        iters.push_back(state_.imm_memtables[i]->begin_ptr());
+    }
+    
+    auto merge_iter = MergeIterator::create(std::move(iters));
+    auto lsm_iter = LsmIterator::create(std::move(merge_iter));
+    return FusedIterator::create(std::move(lsm_iter));
+}
+
+// Wrapper implementation
+std::unique_ptr<FusedIterator> Lsm::scan() {
+    return inner_->scan();
 }
 
 bool LsmStorageInner::try_freeze(int estimated_size) {

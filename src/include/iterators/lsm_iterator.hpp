@@ -7,7 +7,7 @@
 /**
  * LSMIterator wraps a MergeIterator over memtables and filters out deleted keys.
  */
-class LsmIterator : StorageIterator {
+class LsmIterator : public StorageIterator {
 public:
     explicit LsmIterator(std::unique_ptr<MergeIterator> inner);
     static std::unique_ptr<LsmIterator> create(std::unique_ptr<MergeIterator> merge_iter);
