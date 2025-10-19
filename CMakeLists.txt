@@ -32,11 +32,16 @@ set(DEBUG_COMPILE_OPTIONS -O0 -g3 -fno-omit-frame-pointer)
 target_compile_options(lsm PRIVATE $<$<CONFIG:Debug>:${DEBUG_COMPILE_OPTIONS}>)
 
 # ---- Test Discovery ----
-file(GLOB TEST_SOURCES "test/*_test.cpp")
+file(GLOB_RECURSE TEST_SOURCES "test/*_test.cpp")
 
 # Function to create tests automatically
 function(create_test test_file)
-    get_filename_component(test_name ${test_file} NAME_WE)
+    # Get relative path from test directory to avoid name conflicts
+    file(RELATIVE_PATH rel_path "${CMAKE_SOURCE_DIR}/test" ${test_file})
+    # Remove .cpp and replace / with _ to create unique test names
+    string(REPLACE ".cpp" "" test_name ${rel_path})
+    string(REPLACE "/" "_" test_name ${test_name})
+    
     add_executable(${test_name} ${test_file})
     target_link_libraries(${test_name} PRIVATE lsm GTest::gtest GTest::gtest_main pthread)
     target_compile_options(${test_name} PRIVATE $<$<CONFIG:Debug>:${DEBUG_COMPILE_OPTIONS}>)

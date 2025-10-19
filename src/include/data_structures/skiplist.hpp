@@ -10,7 +10,7 @@ Author: Nicholas Terek
 */
 
 #pragma once
-#include "src/include/StorageIterator.hpp"
+#include "src/include/iterators/StorageIterator.hpp"
 #include <string>
 #include <vector>
 #include <optional>
